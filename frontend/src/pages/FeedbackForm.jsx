@@ -64,7 +64,16 @@ const FeedbackForm = () => {
       const result = await res.json();
 
       if (!res.ok) {
-        toast.error(result.message || "Server error.");
+        // Show only the first validation error
+        if (
+          result.errors &&
+          Array.isArray(result.errors) &&
+          result.errors.length
+        ) {
+          toast.error(result.errors[0]);
+        } else {
+          toast.error(result.message || "Server error.");
+        }
         return;
       }
 
