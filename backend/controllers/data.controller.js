@@ -5,42 +5,50 @@ export const createFeedback = async (req, res) => {
     const { firstName, lastName, ageGroup, bloodGroup, medicalConditions } =
       req.body;
 
-    if (!firstName || !lastName || !ageGroup || !bloodGroup) {
+    if (typeof firstName !== "string" || typeof lastName !== "string") {
+      return res.status(400).json({ message: "Names must be text strings." });
+    }
+    if (!firstName.trim() || !lastName.trim()) {
       return res
         .status(400)
-        .json({ message: "Please fill all required fields." });
+        .json({ message: "First and last name cannot be empty." });
     }
 
-    const newFeedback = new Feedback({
-      firstName,
-      lastName,
+    const payload = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
       ageGroup,
       bloodGroup,
-      medicalConditions: medicalConditions || [],
-    });
+      medicalConditions: Array.isArray(medicalConditions)
+        ? medicalConditions
+        : [],
+    };
 
-    const savedFeedback = await newFeedback.save();
-    res.status(201).json({
-      message: "Feedback submitted successfully!",
-      data: savedFeedback,
-    });
+    // Create & save
+    const newFeedback = new Feedback(payload);
+    const saved = await newFeedback.save();
+    res
+      .status(201)
+      .json({ message: "Feedback submitted successfully", data: saved });
   } catch (error) {
-    // Handle Mongoose validation errors or other server errors
+    // Handle Mongoose validation errors
     if (error.name === "ValidationError") {
-      const messages = Object.values(error.errors).map((val) => val.message);
+      const messages = Object.values(error.errors).map((err) => err.message);
       return res
         .status(400)
         .json({ message: "Validation Error", errors: messages });
     }
+    console.error("CreateFeedback Error:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
 
 export const getAllFeedback = async (req, res) => {
   try {
-    const feedbacks = await Feedback.find({});
+    const feedbacks = await Feedback.find().sort({ createdAt: -1 });
     res.status(200).json({ count: feedbacks.length, data: feedbacks });
   } catch (error) {
+    console.error("GetAllFeedback Error:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
